@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garbages Chronicles</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header { text-align: center; margin-bottom: 30px; }
+        .container { width: 100%; max-width: 600px; }
+
+        /* Formulario */
+        .editor {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        /* Estilos específicos para inputs de URL */
+        input[type="url"] {
+            background-color: #f9fafb;
+            font-size: 0.9em;
+        }
+
+        textarea { height: 100px; resize: vertical; }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        button:hover { background-color: #1d4ed8; }
+
+        /* Estilos del Post */
+        .post-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+            position: relative;
+        }
+
+        .post-date { font-size: 0.8em; color: #6b7280; margin-bottom: 10px; }
+        
+        .delete-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            width: auto;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        /* NUEVOS ESTILOS PARA IMAGEN Y ENLACE */
+        .post-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: block;
+        }
+
+        .post-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+            border: 1px solid var(--primary);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .post-link:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>👑 Blog con Multimedia 👑</h1>
+        <p>Añadir Enlaces y imágenes</p>
+    </header>
+
+    <div class="container">
+        <div class="editor">
+            <h2>Nuevo Post</h2>
+            <input type="text" id="postTitle" placeholder="Título del post..." required>
+            <textarea id="postContent" placeholder="Escribe aquí tu contenido..." required></textarea>
+            
+            <label style="font-size: 0.8em; color: gray;">Opcional:</label>
+            <input type="url" id="postImage" placeholder="Pegar URL de una imagen (ej: https://sitio.com/foto.jpg)">
+            <input type="url" id="postLink" placeholder="Pegar enlace externo (ej: https://wikipedia.org)">
+            
+            <button onclick="guardarPost()">Publicar</button>
+        </div>
+
+        <div id="postsList"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/posts';
+
+        document.addEventListener('DOMContentLoaded', cargarPosts);
+
+        // FUNCIÓN GUARDAR (POST)
+        async function guardarPost() {
+            const titulo = document.getElementById('postTitle').value;
+            const contenido = document.getElementById('postContent').value;
+            const imagen = document.getElementById('postImage').value;
+            const enlace = document.getElementById('postLink').value;
+
+            if (!titulo || !contenido) {
+                alert("Título y contenido son obligatorios");
+                return;
+            }
+
+            const nuevoPost = {
+                titulo,
+                contenido,
+                imagen,
+                enlace,
+                fecha: new Date().toLocaleDateString()
+            };
+
+            try {
+                // Enviamos los datos al servidor
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nuevoPost)
+                });
+
+                // Limpiar campos
+                document.getElementById('postTitle').value = '';
+                document.getElementById('postContent').value = '';
+                document.getElementById('postImage').value = '';
+                document.getElementById('postLink').value = '';
+                
+                // Recargar la lista desde el servidor
+                cargarPosts();
+
+            } catch (error) {
+                console.error("Error al guardar:", error);
+            }
+        }
+
+        // FUNCIÓN CARGAR (GET)
+        async function cargarPosts() {
+            const lista = document.getElementById('postsList');
+            lista.innerHTML = '';
+
+            try {
+                // Pedimos los datos al servidor
+                const respuesta = await fetch(API_URL);
+                const posts = await respuesta.json();
+
+                posts.forEach(post => {
+                    let imagenHtml = post.imagen ? `<img src="${post.imagen}" class="post-img">` : '';
+                    let enlaceHtml = post.enlace ? `<br><a href="${post.enlace}" class="post-link" target="_blank">🔗 Ver enlace</a>` : '';
+
+                    const html = `
+                        <div class="post-card">
+                            <h3>${post.titulo}</h3>
+                            <p class="post-date">${post.fecha}</p>
+                            <p>${post.contenido}</p>
+                            ${imagenHtml}
+                            ${enlaceHtml}
+                            <button class="delete-btn" onclick="borrarPost(${post.id})">Borrar</button>
+                        </div>
+                    `;
+                    lista.innerHTML += html;
+                });
+            } catch (error) {
+                console.error("Error al cargar:", error);
+                lista.innerHTML = "<p>Error al conectar con el servidor.</p>";
+            }
+        }
+
+        // FUNCIÓN BORRAR (DELETE)
+        async function borrarPost(id) {
+            if(!confirm("¿Seguro que quieres borrar este post?")) return;
+
+            try {
+                await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+                cargarPosts();
+            } catch (error) {
+                console.error("Error al borrar:", error);
+            }
+        }
+    </script>
+</body>
+</html>
